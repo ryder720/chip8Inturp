@@ -37,7 +37,29 @@ const int SCALE_FACTOR = 15; // Increase this for a larger window
 const int SCREEN_WIDTH = CHIP8_WIDTH * SCALE_FACTOR;
 const int SCREEN_HEIGHT = CHIP8_HEIGHT * SCALE_FACTOR;
 
-void loadRom(std::string filePath = "./roms/logo.ch8"){
+// Initialize the clock variable
+int clocktime = 0;
+
+void update_clock() {
+    clocktime++;
+}
+
+// Update the timers at 60Hz
+void update_timers() {
+    if (clocktime % 16 == 0) { // 16 milliseconds = 60Hz
+        // Update the delay timer (DT)
+        if(dt != 0){
+            dt--;
+        }
+        // Update the sound timer (ST)
+        printf("ST: %d\n", dt);
+        if(st != 0){
+            st--;
+        }
+    }
+}
+
+void loadRom(std::string filePath = "./roms/XandO.ch8"){
     
     std::filesystem::path romPath{filePath};
     if(std::filesystem::exists(romPath)){
@@ -136,7 +158,9 @@ int main(int argc, char* argv[]){
         emulateCycle();
 
         // update timers on 60hz clock
-
+        update_clock();
+        update_timers();
+        
         
         
         // Update graphics
@@ -171,20 +195,20 @@ int main(int argc, char* argv[]){
                     // If the pixel at (x, y) is ON (value is 1)
                     if (gfx[index] == 1) {
                         // Create a rectangle for the scaled pixel
-                        SDL_Rect pixelRect;
-                        pixelRect.x = x * SCALE_FACTOR;
-                        pixelRect.y = y * SCALE_FACTOR;
-                        pixelRect.w = SCALE_FACTOR;
-                        pixelRect.h = SCALE_FACTOR;
+                    SDL_Rect pixelRect;
+                    pixelRect.x = x * SCALE_FACTOR;
+                    pixelRect.y = y * SCALE_FACTOR;
+                    pixelRect.w = SCALE_FACTOR;
+                    pixelRect.h = SCALE_FACTOR;
 
-                        // Draw the filled rectangle
-                        SDL_RenderFillRect(renderer, &pixelRect);
+                    // Draw the filled rectangle
+                    SDL_RenderFillRect(renderer, &pixelRect);
                     }
                     // No need to draw if the pixel is OFF, because we already cleared to black
                 }
             }
             SDL_RenderPresent(renderer);
-            drawFlag = false;
+            //drawFlag = false;
         }
         
         

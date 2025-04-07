@@ -54,7 +54,7 @@ void initializeCpu(){
     // Registers zeroed
     for (int i = 0; i < 16; i++)
     {
-        V[i] = 0;
+        V[i] = 0x00;
     }
     // Reset timers
     dt = 0;
@@ -72,10 +72,7 @@ void initializeCpu(){
     std::cout << "CPU Initialized\n";
 }
 
-// Update timers
-void updateTimers(){
-    // update timers
-}
+
 
 // Emulate cycle
 void emulateCycle(){
@@ -86,13 +83,13 @@ void emulateCycle(){
     opcode = memory[pc] << 8 | memory[pc + 1];
 
     // Get the first 4 bits by bitwise AND with 0xF000
-    switch (opcode & 0xF000)
+    switch (opcode & 0xF000u)
     {
         case 0x0000:
             // Multiple 0x0 opcodes
             switch (opcode & 0x000F) 
             {
-            case 0x0000: // 0x00E0 Clear screen
+            case 0x0000u: // 0x00E0 Clear screen
                 printf("0x00E0 Clear Screen OPCODE: %0X\n", opcode);
 
                 // Clear screen
@@ -101,7 +98,7 @@ void emulateCycle(){
                 pc += 2; // Move program counter
                 break;
             
-            case 0x000E: // 0x000E Return from subrutine
+            case 0x000Eu: // 0x000E Return from subrutine
                 printf("0x00EE Return from Subroutine OPCODE: %0X\n", opcode);
                 // Get last pointer from stack
                 pc = stack[sp - 1];
@@ -113,59 +110,70 @@ void emulateCycle(){
                 break;
             }
             break;
-        case 0x1000: // 1NNN Jump to location 1NNN
+        case 0x1000u: // 1NNN Jump to location 1NNN
             printf("1NNN Jump to location 1NNN OPCODE: %0X\n", opcode);
-            pc = opcode & 0x0FFF;
+            pc = opcode & 0x0FFFu;
             break;
-        case 0x3000: // 3XKK Skip Next instruction if Vx == kk
+        case 0x2000u: // 2NNN Call subroutine at 2NNN
+            printf("2NNN Call Subroutine at 2NNN OPCODE: %0X\n", opcode);
+            stack[sp] = pc;
+            sp++;
+            pc = opcode & 0x0FFFu;
+            break;
+        case 0x3000u: // 3XKK Skip Next instruction if Vx == kk
             printf("3XKK Skip next instruction if Vx == kk OPCODE: %0X\n", opcode);
-            if(V[(opcode & 0x0F00) >> 8] == opcode & 0x00FF){
+            printf("PC before: %X\n", pc);
+            printf("Checking if V[%X] (%X) == %X\n", (opcode & 0x0F00u) >> 8, V[(opcode & 0x0F00u) >> 8], (opcode & 0x00FFu));
+            if(V[(opcode & 0x0F00u) >> 8] == (opcode & 0x00FFu)){
                 pc += 4;
+                printf("Skipped\n");
             }
             else{
                 pc += 2;
+                printf("%X != %X\n", (opcode & 0x00FFu) , V[(opcode & 0x0F00u) >> 8]);
             }
+            printf("PC after: %X\n", pc);
             break;
-        case 0x6000: // 6XKK Set Vx = kk
+        case 0x6000u: // 6XKK Set Vx = kk
             printf("6XKK Set Vx = kk OPCODE: %0X\n", opcode);
-            V[opcode & 0x0F00 >> 8] = opcode & 0x00FF;
+            V[(opcode & 0x0F00u) >> 8] = opcode & 0x00FFu;
             pc += 2;
             break;
-        case 0x7000: // 7XKK Set Vx = Vx + kk
+        case 0x7000u: // 7XKK Set Vx = Vx + kk
             printf("7XKK Set Vx = Vx + kk OPCODE: %0X\n", opcode);
-            V[opcode & 0x0F00 >> 8] += (opcode & 0x0F00);
+            V[(opcode & 0x0F00u) >> 8] += opcode & 0x00FFu;
             pc += 2;
             break;
-        case 0x8000: // Multiple math op codes
-                switch (opcode & 0x000F){
-                    case 0x0000: // 8XY0 Set the value of Vy into Vx
+        case 0x8000u: // Multiple math op codes
+                switch (opcode & 0x000Fu){
+                    case 0x0000u: // 8XY0 Set the value of Vy into Vx
                         printf("8XY0 Set Vx = kk OPCODE: %0X\n", opcode);
-                        V[opcode & 0x0F00 >> 8] = V[opcode & 0x00F0 >> 4];
+                        V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x00F0u) >> 4];
                     default:
                         printf("Unknown OPCODE: %0X\n", opcode);
                         break;
                 }
             break;
         
-        case 0xA000: // ANNN: set I to address NNN
+        case 0xA000u: // ANNN: set I to address NNN
             printf("ANNN Set I to NNN OPCODE: %0X\n", opcode);
-            I = opcode & 0x0FFF;
+            I = opcode & 0x0FFFu;
             // Move to next instruction
             pc += 2;
             break;
         
-        case 0xD000:{ // DXYN: Displayingsprites
+        case 0xD000u:{ // DXYN: Displaying sprites
             printf("DXYN Display n-byte sprite at memory location I OPCODE: %0X\n", opcode);
             // A doozy This instruction starts by reading n bytes starting at I
             // These are displayed as sprites at the location (Vx,Vy)
             // Sprites are XOR'd onto the existing screen which can cause VF to set to 1
             // If a pixel would be placed outside of the screen it would then be wrapped around
             // Extract coordinates and height from opcode
-        unsigned short x_coord_reg = (opcode & 0x0F00) >> 8; // Index for Vx
-        unsigned short y_coord_reg = (opcode & 0x00F0) >> 4; // Index for Vy
+        unsigned short x_coord_reg = (opcode & 0x0F00u) >> 8; // Index for Vx
+        unsigned short y_coord_reg = (opcode & 0x00F0u) >> 4; // Index for Vy
         unsigned short start_x = V[x_coord_reg]; // Get starting X from Vx
         unsigned short start_y = V[y_coord_reg]; // Get starting Y from Vy
-        unsigned short height = opcode & 0x000F;  // Height of the sprite (N)
+        unsigned short height = opcode & 0x000Fu;  // Height of the sprite (N)
 
         unsigned char pixel_row_data; // To store one byte (row) of sprite data
 
@@ -184,7 +192,7 @@ void emulateCycle(){
             for (int xline = 0; xline < 8; ++xline) {
                 // Check if the current bit in the sprite data is set (1)
                 // (0x80 >> xline) creates masks: 10000000, 01000000, ...
-                if ((pixel_row_data & (0x80 >> xline)) != 0) {
+                if ((pixel_row_data & (0x80u >> xline)) != 0) {
                     // Calculate target screen coordinates with wrapping
                     int targetX = (start_x + xline) % 64;
                     int targetY = (start_y + yline) % 32;
@@ -210,6 +218,25 @@ void emulateCycle(){
             break;
         }
         
+        case 0xF000u: // Multiple 0xF opcodes
+            switch (opcode & 0x00FFu)
+            {
+            case 0x0007u: // FX07: Set Vx to the value of the delay timer
+                printf("FX07 Set Vx = DT OPCODE: %0X\n", opcode);
+                V[(opcode & 0x0F00u) >> 8] = dt;
+                pc += 2;
+                break;
+            case 0x0015u: // FX15: Set the delay timer to the value of Vx
+                printf("FX15 Set DT = Vx OPCODE: %0X\n", opcode);
+                dt = V[(opcode & 0x0F00u) >> 8];
+                pc += 2;
+                break;
+            default:
+                printf("Unknown OPCODE: %0X\n", opcode);
+                break;
+            }
+        break;
+
         default:
             printf("Unknown OPCODE: %0X\n", opcode);
             break;
