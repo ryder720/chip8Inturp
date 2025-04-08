@@ -167,9 +167,17 @@ void emulateCycle(){
             printf("3XKK Skip next instruction if Vx != kk OPCODE: %0X\n", opcode);
             if(V[(opcode & 0x0F00u) >> 8] == (opcode & 0x00FFu)){
                 pc += 2;
-            }
-            else{
+            } else{
                 pc += 4;
+            }
+            break;
+        case 0x5000u: // 5XY0 SE Vx, Vy
+            printf("3XKK Skip next instruction if Vx == Vy OPCODE: %0X\n", opcode);
+            if (V[(opcode & 0x0F00u) >> 8] == V[(opcode & 0x00F0) >> 4])
+            {
+                pc += 4;
+            } else{
+                pc += 2;
             }
             break;
         case 0x6000u: // 6XKK Set Vx = kk
@@ -189,9 +197,19 @@ void emulateCycle(){
                         V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x00F0u) >> 4];
                         pc += 2;
                         break;
+                    case 0x0001u: // 8XY1 Set Vx = Vx OR Vy
+                        printf("8XY1 Set Vx = Vx OR Vy OPCODE: %0X\n", opcode);
+                        V[(opcode & 0x0F00u) >> 8] |= V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
                     case 0x0002u: // 8XY2 Set Vx = Vx AND Vy
                         printf("8XY2 Set Vx = Vx AND Vy OPCODE: %0X\n", opcode);
-                        V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x0F00u) >> 8] & V[(opcode & 0x00F0u) >> 4];
+                        V[(opcode & 0x0F00u) >> 8] &= V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
+                    case 0x0003u: // 8XY3 Set Vx = Vx XOR Vy
+                        printf("8XY3 Set Vx = Vx XOR Vy OPCODE: %0X\n", opcode);
+                        V[(opcode & 0x0F00u) >> 8] ^= V[(opcode & 0x00F0u) >> 4];
                         pc += 2;
                         break;
                     case 0x0004u: // 8XY4 Set Vx = Vx + Vy, set VF = carry
@@ -206,21 +224,45 @@ void emulateCycle(){
                         V[(opcode & 0x0F00u) >> 8] += V[(opcode & 0x00F0u) >> 4];
                         pc += 2;
                         break;
-                    case 0x0006: // 8XY6 Set Vx = Vx SHR 1 V[x] / 2
-                        printf("8XYE Set Vx = Vx SHL 1 OPCODE: %0X\n", opcode);
-                        // Set V[0xF] to least significant bit
-                        V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x01;
-                        // Shift right
-                        V[(opcode & 0x0F00) >> 8] >>= 1;
+                    case 0x0005u: // 8XY5 Set Vx = Vx - Vy, set VF = carry
+                        printf("8XY5 Set Vx = Vx - Vy, set VF = carry OPCODE: %0X\n", opcode);
+                        if ((uint16_t)(V[(opcode & 0x0F00u) >> 8]) >= (uint16_t)(V[(opcode & 0x00F0u) >> 4]))
+                        {
+                            V[0xFu] = 1;
+                        } else {
+                            V[0xFu] = 0;
+                        }
 
+                        V[(opcode & 0x0F00u) >> 8] -= V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
+                    case 0x0006u: // 8XY6 Set Vx = Vx SHR 1 V[x] / 2
+                        printf("8XY6 Set Vx = Vx SHR 1 OPCODE: %0X\n", opcode);
+                        // Set V[0xF] to least significant bit
+                        V[0xFu] = V[(opcode & 0x0F00u) >> 8] & 0x01;
+                        // Shift right
+                        V[(opcode & 0x0F00u) >> 8] >>= 1;
+
+                        pc += 2;
+                        break;
+                    case 0x0007u: // 8XY7 Set Vx = Vy - Vx, set VF = carry
+                        printf("8XY7 Set Vx = Vx + Vy, set VF = carry OPCODE: %0X\n", opcode);
+                        if ((uint16_t)(V[(opcode & 0x0F00u) >> 8]) <= (uint16_t)(V[(opcode & 0x00F0u) >> 4]))
+                        {
+                            V[0xFu] = 1;
+                        } else {
+                            V[0xFu] = 0;
+                        }
+
+                        V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x00F0u) >> 4] - V[(opcode & 0x0F00u) >> 8];
                         pc += 2;
                         break;
                     case 0x000Eu: // 8XYE Set Vx = Vx SHL 1 V[x] * 2
                         printf("8XYE Set Vx = Vx SHL 1 OPCODE: %0X\n", opcode);
                         // Set V[0xF] to most significant bit
-                        V[0xF] = V[(opcode & 0x0F00) >> 8] >> 7;
+                        V[0xFu] = V[(opcode & 0x0F00u) >> 8] >> 7;
                         // Shift left
-                        V[(opcode & 0x0F00) >> 8] <<= 1;
+                        V[(opcode & 0x0F00u) >> 8] <<= 1;
 
                         pc += 2;
                         break;
@@ -229,12 +271,24 @@ void emulateCycle(){
                         break;
                 }
             break;
+        case 0x9000u: // 9XY0 Skip next instruction if Vx != Vy.
+            printf("9XY0 Skip next instruction if Vx != Vy OPCODE: %0X\n", opcode);
+            if(V[(opcode & 0x0F00u) >> 8] == V[(opcode & 0x00F0u) >> 4]){
+                pc += 2;
+            } else{
+                pc += 4;
+            }
+            break;
         
         case 0xA000u: // ANNN: set I to address NNN
             printf("ANNN Set I to NNN OPCODE: %0X\n", opcode);
             I = opcode & 0x0FFFu;
             // Move to next instruction
             pc += 2;
+            break;
+        case 0xB000u: // BNNN: Jump to NNN + V[0]
+            printf("BNNN Jump to NNN + V[0] OPCODE: %0X\n", opcode);
+            pc = (opcode & 0x0FFF) + V[0];
             break;
         
         case 0xC000u: // CXKK: Set V[x] to random byte & kk
@@ -302,6 +356,15 @@ void emulateCycle(){
 
         case 0xE000u: // Multiple 0xE opcodes
             switch (opcode & 0x00FFu){
+                case 0x009Eu: // EX9E: Skip next instruction if key with the value of Vx is pressed
+                    // Check if key[i] is down or up
+                    if (key[(opcode & 0x0F00u) >> 8] == 1)
+                    {
+                        pc += 4;
+                    } else {
+                        pc += 2;
+                    }
+                    break;
                 case 0x00A1u: // EXA1: Skip next instruction if key with the value of Vx is not pressed
                 printf("EXA1 Skip next instruction if key with the value of Vx is not pressed OPCODE: %0X\n", opcode);
                     // Check if key[i] is down or up
@@ -375,11 +438,19 @@ void emulateCycle(){
                 memory[I + 2] = (V[(opcode & 0x0F00u) >> 8] % 100) % 10;
                 pc += 2;
                 break;
-            case 0x0065u: // FX65: Read registers V0 through Vx from memory starting at location I
-                printf("FX65 Read registers V0 through Vx from memory starting at location I OPCODE: %0X\n", opcode);
+            case 0x0055u: // FX55 Write
+                printf("FX55 Write registers V0 through Vx to memory starting at location I OPCODE: %0X\n", opcode);
                 for (unsigned int i = 0; i < ((opcode & 0x0F00u) >> 8); i++)
                 {
-                    V[i] = I + i;
+                    memory[I + i] = V[i];
+                }
+                pc += 2;
+                break;
+            case 0x0065u: // FX65: Read registers V0 through Vx from memory starting at location I
+                printf("FX65 Write registers V0 through Vx from memory starting at location I OPCODE: %0X\n", opcode);
+                for (unsigned int i = 0; i < ((opcode & 0x0F00u) >> 8); i++)
+                {
+                    V[i] = memory[I + i];
                 }
                 pc += 2;
                 break;
