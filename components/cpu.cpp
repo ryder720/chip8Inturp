@@ -358,6 +358,7 @@ void emulateCycle(){
         case 0xE000u: // Multiple 0xE opcodes
             switch (opcode & 0x00FFu){
                 case 0x009Eu: // EX9E: Skip next instruction if key with the value of Vx is pressed
+                    printf("EX9E Skip next instruction if key with the value of Vx is pressed OPCODE: %0X\n", opcode);
                     // Check if key[i] is down or up
                     if (key[V[(opcode & 0x0F00u) >> 8]] == 1)
                     {
@@ -443,7 +444,7 @@ void emulateCycle(){
                     pc += 2;
                 }
                 break;
-            case 0x0055u: // FX55 Write
+            case 0x0055u: // FX55 Write registers V0 through Vx to memory starting at location I
                 printf("FX55 Write registers V0 through Vx to memory starting at location I OPCODE: %0X\n", opcode);
                 for (unsigned int i = 0; i <= ((opcode & 0x0F00u) >> 8); i++)
                 {
