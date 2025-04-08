@@ -52,7 +52,6 @@ void update_timers() {
             dt--;
         }
         // Update the sound timer (ST)
-        printf("ST: %d\n", dt);
         if(st != 0){
             st--;
         }
@@ -154,6 +153,77 @@ int main(int argc, char* argv[]){
     std::cout << "Program Start\n";
     while (playing)
     {
+        // Get new Keydown
+        clearKeys();
+        while(SDL_PollEvent(&event) != 0){
+            if (event.type == SDL_QUIT){
+                playing = false;
+            }
+            else if (event.type == SDL_KEYDOWN)
+            {
+                // Handle key events
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_ESCAPE:
+                    playing = false;
+                    break;
+                
+                case SDLK_1:
+                    updateKey(0);
+                    break;
+                case SDLK_2:
+                    updateKey(1);
+                    break;
+                case SDLK_3:
+                    updateKey(2);
+                    break;
+                case SDLK_4:
+                    updateKey(3);
+                    break;
+                case SDLK_q:
+                    updateKey(4);
+                    break;
+                case SDLK_w:
+                    updateKey(5);
+                    break;
+                case SDLK_e:
+                    updateKey(6);
+                    break;
+                case SDLK_r:
+                    updateKey(7);
+                    break;
+                case SDLK_a:
+                    updateKey(8);
+                    break;
+                case SDLK_s:
+                    updateKey(9);
+                    break;
+                case SDLK_d:
+                    updateKey(10);
+                    break;
+                case SDLK_f:
+                    updateKey(11);
+                    break;
+                case SDLK_z:
+                    updateKey(12);
+                    break;
+                case SDLK_x:
+                    updateKey(13);
+                    break;
+                case SDLK_c:
+                    updateKey(14);
+                    break;
+                case SDLK_v:
+                    updateKey(15);
+                    break;
+                default:
+                    
+                    break;
+                }
+                
+            }
+            
+        }
         // Run system
         emulateCycle();
 
@@ -162,21 +232,7 @@ int main(int argc, char* argv[]){
         update_timers();
         
         
-        
         // Update graphics
-        while(SDL_PollEvent(&event) != 0){
-            if (event.type == SDL_QUIT){
-                playing = false;
-            }
-            else if (event.type == SDL_KEYDOWN)
-            {
-                // Handle key events
-                if (event.key.keysym.sym == SDLK_ESCAPE){
-                    playing = false;
-                }
-            }
-            
-        }
         if(drawFlag == true){
             // Draw every pixel on the screen
             // 1. Clear screen (set background color)

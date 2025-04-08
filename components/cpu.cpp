@@ -1,6 +1,8 @@
 #include "headers/cpu.h"
 #include <iostream>
 #include <iomanip>
+#include <cstdlib>
+#include <ctime>
 
 unsigned char V[16]; // Registers
 unsigned char dt{0}; // Delay timer
@@ -67,10 +69,36 @@ void initializeCpu(){
     // Program counter set to begining of rom memory
     pc = 0x200;
 
+    // Load fontset into memory
+    for (int i = 0; i < 80; i++)
+    {
+        memory[i + 0x050] = fontset[i];
+    }
     
+
+    // Set rng seed
+    std::srand(std::time(0));
 
     std::cout << "CPU Initialized\n";
 }
+
+int generateRandomIntFromZero(int max){
+    return std::rand() % (max + 1);
+}
+
+void clearKeys(){
+    for (int i = 0; i < 16; i++)
+    {
+        key[i] = 0;
+    }
+    
+}
+
+void updateKey(int keyPressed){
+    clearKeys();
+    key[keyPressed] = 1;
+}
+
 
 
 
@@ -81,6 +109,7 @@ void emulateCycle(){
     // We then murge using bitwise OR aka |
     // Using << 8 to shift the first byte over 8 bits
     opcode = memory[pc] << 8 | memory[pc + 1];
+    bool keyNotFound = true;
 
     // Get the first 4 bits by bitwise AND with 0xF000
     switch (opcode & 0xF000u)
@@ -122,17 +151,21 @@ void emulateCycle(){
             break;
         case 0x3000u: // 3XKK Skip Next instruction if Vx == kk
             printf("3XKK Skip next instruction if Vx == kk OPCODE: %0X\n", opcode);
-            printf("PC before: %X\n", pc);
-            printf("Checking if V[%X] (%X) == %X\n", (opcode & 0x0F00u) >> 8, V[(opcode & 0x0F00u) >> 8], (opcode & 0x00FFu));
             if(V[(opcode & 0x0F00u) >> 8] == (opcode & 0x00FFu)){
                 pc += 4;
-                printf("Skipped\n");
             }
             else{
                 pc += 2;
-                printf("%X != %X\n", (opcode & 0x00FFu) , V[(opcode & 0x0F00u) >> 8]);
             }
-            printf("PC after: %X\n", pc);
+            break;
+        case 0x4000u: // 3XKK Skip Next instruction if Vx != kk
+            printf("3XKK Skip next instruction if Vx != kk OPCODE: %0X\n", opcode);
+            if(V[(opcode & 0x0F00u) >> 8] == (opcode & 0x00FFu)){
+                pc += 2;
+            }
+            else{
+                pc += 4;
+            }
             break;
         case 0x6000u: // 6XKK Set Vx = kk
             printf("6XKK Set Vx = kk OPCODE: %0X\n", opcode);
@@ -149,6 +182,25 @@ void emulateCycle(){
                     case 0x0000u: // 8XY0 Set the value of Vy into Vx
                         printf("8XY0 Set Vx = kk OPCODE: %0X\n", opcode);
                         V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
+                    case 0x0002u: // 8XY2 Set Vx = Vx AND Vy
+                        printf("8XY2 Set Vx = Vx AND Vy OPCODE: %0X\n", opcode);
+                        V[(opcode & 0x0F00u) >> 8] = V[(opcode & 0x0F00u) >> 8] & V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
+                    case 0x0004u: // 8XY4 Set Vx = Vx + Vy, set VF = carry
+                        printf("8XY4 Set Vx = Vx + Vy, set VF = carry OPCODE: %0X\n", opcode);
+                        if ((uint16_t)(V[(opcode & 0x0F00u) >> 8]) + (uint16_t)(V[(opcode & 0x00F0u) >> 4]) > 0xFF)
+                        {
+                            V[0xFu] = 1;
+                        } else {
+                            V[0xFu] = 0;
+                        }
+
+                        V[(opcode & 0x0F00u) >> 8] += V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
                     default:
                         printf("Unknown OPCODE: %0X\n", opcode);
                         break;
@@ -159,6 +211,13 @@ void emulateCycle(){
             printf("ANNN Set I to NNN OPCODE: %0X\n", opcode);
             I = opcode & 0x0FFFu;
             // Move to next instruction
+            pc += 2;
+            break;
+        
+        case 0xC000u: // CXKK: Set V[x] to random byte & kk
+            printf("CXKK: Set V[x] to random byte & kk OPCODE: %0X\n", opcode);
+            V[(opcode & 0x0F00u) >> 8] = generateRandomIntFromZero(255) & (opcode & 0x00FFu);
+
             pc += 2;
             break;
         
@@ -217,6 +276,24 @@ void emulateCycle(){
             pc += 2;
             break;
         }
+
+        case 0xE000u: // Multiple 0xE opcodes
+            switch (opcode & 0x00FFu){
+                case 0x00A1u: // EXA1: Skip next instruction if key with the value of Vx is not pressed
+                printf("EXA1 Skip next instruction if key with the value of Vx is not pressed OPCODE: %0X\n", opcode);
+                    // Check if key[i] is down or up
+                    if (key[(opcode & 0x0F00u) >> 8] == 1)
+                    {
+                        pc += 2;
+                    } else {
+                        pc += 4;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            break;
         
         case 0xF000u: // Multiple 0xF opcodes
             switch (opcode & 0x00FFu)
@@ -226,11 +303,59 @@ void emulateCycle(){
                 V[(opcode & 0x0F00u) >> 8] = dt;
                 pc += 2;
                 break;
+            case 0x000Au: // FX0A: Wait for and store key press in Vx
+                printf("FX0A Wait for and store key press in Vx OPCODE: %0X\n", opcode);
+                int keyFound;
+                for (int i = 0; i < 16; i++)
+                {
+                    if (key[i] == 1)
+                    {
+                        keyNotFound = false;
+                        keyFound = i;
+                        
+                    }
+                    
+                }
+                
+                if(keyNotFound == true){
+                    break;
+                }
+                V[(opcode & 0x0F00u) >> 8] = key[keyFound];
+                pc += 2;
+                break;
             case 0x0015u: // FX15: Set the delay timer to the value of Vx
                 printf("FX15 Set DT = Vx OPCODE: %0X\n", opcode);
                 dt = V[(opcode & 0x0F00u) >> 8];
                 pc += 2;
                 break;
+            case 0x0018u: // FX18: Set the sound timer to the value of Vx
+                printf("FX15 Set ST = Vx OPCODE: %0X\n", opcode);
+                st = V[(opcode & 0x0F00u) >> 8];
+                pc += 2;
+                break;
+            case 0x0029u: // FX29: Set I = location of sprite for digit Vx
+                printf("FX29 Set I = location of sprite for digit Vx OPCODE: %0X\n", opcode);
+                // V[x] is the hexcode for the digit I want to display
+                I = 0x050u + V[((opcode & 0x0F00u) >> 8) * 5];
+
+                pc += 2;
+                break;
+            case 0x0033u: // FX33: Store BCD representation of Vx in memory locations I, I+1, and I+2
+                printf("FX33 Store BCD representation of Vx in memory locations I, I+1, and I+2: %0X\n", opcode);
+                memory[I] = V[(opcode & 0x0F00u) >> 8] / 100;
+                memory[I + 1] = (V[(opcode & 0x0F00u) >> 8]  / 10) % 10;
+                memory[I + 2] = (V[(opcode & 0x0F00u) >> 8] % 100) % 10;
+                pc += 2;
+                break;
+            case 0x0065u: // FX65: Read registers V0 through Vx from memory starting at location I
+                printf("FX65 Read registers V0 through Vx from memory starting at location I OPCODE: %0X\n", opcode);
+                for (unsigned int i = 0; i < ((opcode & 0x0F00u) >> 8); i++)
+                {
+                    V[i] = I + i;
+                }
+                pc += 2;
+                break;
+                
             default:
                 printf("Unknown OPCODE: %0X\n", opcode);
                 break;
