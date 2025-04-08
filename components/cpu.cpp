@@ -119,11 +119,11 @@ void emulateCycle(){
     // Get the first 4 bits by bitwise AND with 0xF000
     switch (opcode & 0xF000u)
     {
-        case 0x0000:
+        case 0x0000u:
             // Multiple 0x0 opcodes
-            switch (opcode & 0x000F) 
+            switch (opcode & 0x00FFu) 
             {
-            case 0x0000u: // 0x00E0 Clear screen
+            case 0x00E0u: // 0x00E0 Clear screen
                 printf("0x00E0 Clear Screen OPCODE: %0X\n", opcode);
 
                 // Clear screen
@@ -132,11 +132,12 @@ void emulateCycle(){
                 pc += 2; // Move program counter
                 break;
             
-            case 0x000Eu: // 0x000E Return from subrutine
+            case 0x00EEu: // 0x000E Return from subrutine
                 printf("0x00EE Return from Subroutine OPCODE: %0X\n", opcode);
                 // Get last pointer from stack
                 pc = stack[sp - 1];
                 sp--;
+                pc += 2;
                 break;
             
             default:
@@ -150,7 +151,7 @@ void emulateCycle(){
             break;
         case 0x2000u: // 2NNN Call subroutine at 2NNN
             printf("2NNN Call Subroutine at 2NNN OPCODE: %0X\n", opcode);
-            stack[sp] = pc;
+            stack[sp] = pc + 2;
             sp++;
             pc = opcode & 0x0FFFu;
             break;
@@ -163,12 +164,12 @@ void emulateCycle(){
                 pc += 2;
             }
             break;
-        case 0x4000u: // 3XKK Skip Next instruction if Vx != kk
-            printf("3XKK Skip next instruction if Vx != kk OPCODE: %0X\n", opcode);
-            if(V[(opcode & 0x0F00u) >> 8] == (opcode & 0x00FFu)){
-                pc += 2;
-            } else{
+        case 0x4000u: // 4XKK Skip Next instruction if Vx != kk
+            printf("4XKK Skip next instruction if Vx != kk OPCODE: %0X\n", opcode);
+            if(V[(opcode & 0x0F00u) >> 8] != (opcode & 0x00FFu)){
                 pc += 4;
+            } else{
+                pc += 2;
             }
             break;
         case 0x5000u: // 5XY0 SE Vx, Vy
@@ -273,10 +274,10 @@ void emulateCycle(){
             break;
         case 0x9000u: // 9XY0 Skip next instruction if Vx != Vy.
             printf("9XY0 Skip next instruction if Vx != Vy OPCODE: %0X\n", opcode);
-            if(V[(opcode & 0x0F00u) >> 8] == V[(opcode & 0x00F0u) >> 4]){
-                pc += 2;
-            } else{
+            if(V[(opcode & 0x0F00u) >> 8] != V[(opcode & 0x00F0u) >> 4]){
                 pc += 4;
+            } else{
+                pc += 2;
             }
             break;
         
@@ -358,7 +359,7 @@ void emulateCycle(){
             switch (opcode & 0x00FFu){
                 case 0x009Eu: // EX9E: Skip next instruction if key with the value of Vx is pressed
                     // Check if key[i] is down or up
-                    if (key[(opcode & 0x0F00u) >> 8] == 1)
+                    if (key[V[(opcode & 0x0F00u) >> 8]] == 1)
                     {
                         pc += 4;
                     } else {
@@ -368,11 +369,11 @@ void emulateCycle(){
                 case 0x00A1u: // EXA1: Skip next instruction if key with the value of Vx is not pressed
                 printf("EXA1 Skip next instruction if key with the value of Vx is not pressed OPCODE: %0X\n", opcode);
                     // Check if key[i] is down or up
-                    if (key[(opcode & 0x0F00u) >> 8] == 1)
+                    if (key[V[(opcode & 0x0F00u) >> 8]] == 0)
                     {
-                        pc += 2;
-                    } else {
                         pc += 4;
+                    } else {
+                        pc += 2;
                     }
                     break;
                 default:
@@ -406,7 +407,7 @@ void emulateCycle(){
                 if(keyNotFound == true){
                     break;
                 }
-                V[(opcode & 0x0F00u) >> 8] = key[keyFound];
+                V[(opcode & 0x0F00u) >> 8] = keyFound;
                 pc += 2;
                 break;
             case 0x0015u: // FX15: Set the delay timer to the value of Vx
@@ -427,20 +428,24 @@ void emulateCycle(){
             case 0x0029u: // FX29: Set I = location of sprite for digit Vx
                 printf("FX29 Set I = location of sprite for digit Vx OPCODE: %0X\n", opcode);
                 // V[x] is the hexcode for the digit I want to display
-                I = 0x050u + V[((opcode & 0x0F00u) >> 8) * 5];
+                I = 0x050u + (V[((opcode & 0x0F00u) >> 8)] * 5);
 
                 pc += 2;
                 break;
             case 0x0033u: // FX33: Store BCD representation of Vx in memory locations I, I+1, and I+2
                 printf("FX33 Store BCD representation of Vx in memory locations I, I+1, and I+2: %0X\n", opcode);
-                memory[I] = V[(opcode & 0x0F00u) >> 8] / 100;
-                memory[I + 1] = (V[(opcode & 0x0F00u) >> 8]  / 10) % 10;
-                memory[I + 2] = (V[(opcode & 0x0F00u) >> 8] % 100) % 10;
-                pc += 2;
+                { // Use braces for local variables
+                    uint8_t x_index = (opcode & 0x0F00u) >> 8;
+                    uint8_t val = V[x_index]; 
+                    memory[I]     = val / 100;
+                    memory[I + 1] = (val / 10) % 10; 
+                    memory[I + 2] = val % 10;        
+                    pc += 2;
+                }
                 break;
             case 0x0055u: // FX55 Write
                 printf("FX55 Write registers V0 through Vx to memory starting at location I OPCODE: %0X\n", opcode);
-                for (unsigned int i = 0; i < ((opcode & 0x0F00u) >> 8); i++)
+                for (unsigned int i = 0; i <= ((opcode & 0x0F00u) >> 8); i++)
                 {
                     memory[I + i] = V[i];
                 }
@@ -448,7 +453,7 @@ void emulateCycle(){
                 break;
             case 0x0065u: // FX65: Read registers V0 through Vx from memory starting at location I
                 printf("FX65 Write registers V0 through Vx from memory starting at location I OPCODE: %0X\n", opcode);
-                for (unsigned int i = 0; i < ((opcode & 0x0F00u) >> 8); i++)
+                for (unsigned int i = 0; i <= ((opcode & 0x0F00u) >> 8); i++)
                 {
                     V[i] = memory[I + i];
                 }
