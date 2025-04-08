@@ -94,9 +94,14 @@ void clearKeys(){
     
 }
 
-void updateKey(int keyPressed){
-    clearKeys();
+void keyDown(int keyPressed){
     key[keyPressed] = 1;
+    printf("Key down.\n");
+}
+
+void keyUp(int keyPressed){
+    key[keyPressed] = 0;
+    printf("Key up.\n");
 }
 
 
@@ -199,6 +204,24 @@ void emulateCycle(){
                         }
 
                         V[(opcode & 0x0F00u) >> 8] += V[(opcode & 0x00F0u) >> 4];
+                        pc += 2;
+                        break;
+                    case 0x0006: // 8XY6 Set Vx = Vx SHR 1 V[x] / 2
+                        printf("8XYE Set Vx = Vx SHL 1 OPCODE: %0X\n", opcode);
+                        // Set V[0xF] to least significant bit
+                        V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x01;
+                        // Shift right
+                        V[(opcode & 0x0F00) >> 8] >>= 1;
+
+                        pc += 2;
+                        break;
+                    case 0x000Eu: // 8XYE Set Vx = Vx SHL 1 V[x] * 2
+                        printf("8XYE Set Vx = Vx SHL 1 OPCODE: %0X\n", opcode);
+                        // Set V[0xF] to most significant bit
+                        V[0xF] = V[(opcode & 0x0F00) >> 8] >> 7;
+                        // Shift left
+                        V[(opcode & 0x0F00) >> 8] <<= 1;
+
                         pc += 2;
                         break;
                     default:
@@ -331,6 +354,11 @@ void emulateCycle(){
             case 0x0018u: // FX18: Set the sound timer to the value of Vx
                 printf("FX15 Set ST = Vx OPCODE: %0X\n", opcode);
                 st = V[(opcode & 0x0F00u) >> 8];
+                pc += 2;
+                break;
+            case 0x001Eu: // FX1E: I = I + V[x]
+                printf("FX1E I += V[x] OPCODE: %0X\n", opcode);
+                I += V[(opcode & 0x0F00u) >> 8];
                 pc += 2;
                 break;
             case 0x0029u: // FX29: Set I = location of sprite for digit Vx

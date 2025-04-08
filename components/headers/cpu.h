@@ -9,5 +9,6 @@ extern unsigned char st;
 void initializeCpu();
 void emulateCycle();
 void updateTimers();
-void updateKey(int);
+void keyUp(int);
+void keyDown(int);
 void clearKeys();

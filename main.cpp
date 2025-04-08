@@ -22,7 +22,7 @@ Specs:
 8 bit sound timer
 64 x 32 array frame buffer
 
-fontset takes up 0x0 - 0x080
+fontset takes up 0x050 - 0x09F
 programs start at 0x200
 */
 
@@ -83,7 +83,7 @@ void loadRom(std::string filePath = "./roms/XandO.ch8"){
         file.close();
     } else
     {
-        std::cout << "No ROM Could not be found!!!!\n";
+        std::cerr << "No ROM Could not be found!!!!\n";
     }
     
     
@@ -169,59 +169,117 @@ int main(int argc, char* argv[]){
                     break;
                 
                 case SDLK_1:
-                    updateKey(0);
+                    keyDown(0);
                     break;
                 case SDLK_2:
-                    updateKey(1);
+                    keyDown(1);
                     break;
                 case SDLK_3:
-                    updateKey(2);
+                    keyDown(2);
                     break;
                 case SDLK_4:
-                    updateKey(3);
+                    keyDown(3);
                     break;
                 case SDLK_q:
-                    updateKey(4);
+                    keyDown(4);
                     break;
                 case SDLK_w:
-                    updateKey(5);
+                    keyDown(5);
                     break;
                 case SDLK_e:
-                    updateKey(6);
+                    keyDown(6);
                     break;
                 case SDLK_r:
-                    updateKey(7);
+                    keyDown(7);
                     break;
                 case SDLK_a:
-                    updateKey(8);
+                    keyDown(8);
                     break;
                 case SDLK_s:
-                    updateKey(9);
+                    keyDown(9);
                     break;
                 case SDLK_d:
-                    updateKey(10);
+                    keyDown(10);
                     break;
                 case SDLK_f:
-                    updateKey(11);
+                    keyDown(11);
                     break;
                 case SDLK_z:
-                    updateKey(12);
+                    keyDown(12);
                     break;
                 case SDLK_x:
-                    updateKey(13);
+                    keyDown(13);
                     break;
                 case SDLK_c:
-                    updateKey(14);
+                    keyDown(14);
                     break;
                 case SDLK_v:
-                    updateKey(15);
+                    keyDown(15);
                     break;
                 default:
                     
                     break;
                 }
                 
+            } else if (event.type == SDL_KEYUP)
+            {
+                // Handle key events
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_1:
+                    keyUp(0);
+                    break;
+                case SDLK_2:
+                    keyUp(1);
+                    break;
+                case SDLK_3:
+                    keyUp(2);
+                    break;
+                case SDLK_4:
+                    keyUp(3);
+                    break;
+                case SDLK_q:
+                    keyUp(4);
+                    break;
+                case SDLK_w:
+                    keyUp(5);
+                    break;
+                case SDLK_e:
+                    keyUp(6);
+                    break;
+                case SDLK_r:
+                    keyUp(7);
+                    break;
+                case SDLK_a:
+                    keyUp(8);
+                    break;
+                case SDLK_s:
+                    keyUp(9);
+                    break;
+                case SDLK_d:
+                    keyUp(10);
+                    break;
+                case SDLK_f:
+                    keyUp(11);
+                    break;
+                case SDLK_z:
+                    keyUp(12);
+                    break;
+                case SDLK_x:
+                    keyUp(13);
+                    break;
+                case SDLK_c:
+                    keyUp(14);
+                    break;
+                case SDLK_v:
+                    keyUp(15);
+                    break;
+                default:
+                    
+                    break;
+                }
             }
+            
             
         }
         // Run system
